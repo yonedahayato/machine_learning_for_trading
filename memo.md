@@ -21,6 +21,7 @@ Predict
 
 # L25
 
+
 # L26 memo
 ## Q-Learning Recap
 ### Building a model
