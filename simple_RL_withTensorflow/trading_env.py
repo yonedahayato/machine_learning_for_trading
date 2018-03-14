@@ -9,7 +9,7 @@ class Observation:
         self.stock_num = stock_num
         self.data_length = data_length
 
-        self.status = ["hold", "not_hold"]
+        self.status = {0:"not_hold", 1:"hold"]
         self.observation_num = stock_num * len(self.status) * data_length
         self.n = self.observation_num
 
@@ -18,16 +18,39 @@ class Observation:
         self.status_num = 0
         self.status_table = np.arange(self.observation_num).reshape(self.data_length, self.stock_num * len(self.status))
 
+
+    def execute(self, actions_list):
+        for Id in range(self.stock_num):
+            action = actions_list[Id]
+            hold_status = self.status[self.hold_status[Id]]
+            if action == "buy" and hold_status == "not_hold":
+                self.hold_status[Id] = 1
+            elif action == "sell" and hold_status == "hold":
+                self.hold_status[Id] = 0
+            else:
+                pass
+        return self.hold_status
+
 class Action:
     def __init__(self, stock_num):
         self.action_dic = {0:"buy", 1:"sell", 2:"hold"}
+        self.stock_num = stock_num
         self.n = len(self.action_dic) ** stock_num
 
         action_list = list(range(len(self.action_dic)))
         action_list = list(itertools.product(action_list,repeat=stock_num))
 
         self.action_table = np.array(action_list)
-        print(self.action_table)
+
+    def execute(self, action):
+        actions = self.action_table[action]
+
+        actions_list = []
+        for cnt in range(self.stock):
+            action_num = actions[cnt]
+            actions_list.append(self.action_dic[action_num])
+
+        return actions_list
 
 class Trading_Env:
     def __init__(self):
@@ -63,6 +86,9 @@ class Trading_Env:
         return stock_data_list
 
     def step(self, action):
+        actions_list = self.action_space.execute(action)
+        hold_status = self.observation_space.execute(action_list)
+        ####
         self.status_num += 1
         s1 = None
         r = None
