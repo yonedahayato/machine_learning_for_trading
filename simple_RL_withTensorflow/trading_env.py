@@ -6,12 +6,15 @@ import pandas_datareader.data as web
 
 class Observation:
     def __init__(self):
+        self.data_length, self.stock_data_list = None
         stock_data_list = self.load_stock_data(view_data=False)
         self.stock_num = len(stock_data_list)
 
         self.status = {0:"not_hold", 1:"hold"]
         self.observation_num = self.stock_num * len(self.status) * self.data_length
         self.n = self.observation_num
+
+        self.penalty = None
 
     def load_stock_data(self, view_data=False):
         # start = datetime.datetime(2016,1,1)
@@ -41,16 +44,48 @@ class Observation:
         self.hold_status = [0]*self.stock_num
         self.status_table = np.arange(self.observation_num).reshape(self.data_length, self.stock_num * len(self.status))
 
-    def update_status(self, action_list):
+    def update_status(self, action, Id):
+        stock_data_df = self.stock_data_list[Id]
+
+        if action == "buy":
+            self.hold_status[Id] = 1
+            stock_data_df.loc[step_num, "status"] = "hold"
+
+        elif action == "sell":
+            self.hold_status[Id] = 0
+            stock_data_df.loc[step_num, "status"] = "not_hold"
+
+        elif action in ["do_nothing", "too_much_buy", "too_much_sell"]:
+            if not self.step_num == 0:
+                before_status = stock_data_df.loc[step_num-1, "status"]
+                stock_data_df.loc[step_num, "status"] = before_status
+
+            if action in ["too_much_buy", "too_much_sell"]:
+                self.penalty = 100
+                return
+
+        self.penalty = 0
+        return
+
+    def update_all_status(self, action_list, step_num):
         for Id in range(self.stock_num):
             action = actions_list[Id]
             hold_status = self.status[self.hold_status[Id]]
+
             if action == "buy" and hold_status == "not_hold":
-                self.hold_status[Id] = 1
+                self.update_status(action="buy", Id=Id)
+
             elif action == "sell" and hold_status == "hold":
-                self.hold_status[Id] = 0
+                self.update_status(action="sell", Id=Id)
+
+            elif action == "do_nothing":
+                self.update_status(action="do_nothing", Id=Id)
+
             else:
-                pass
+                if action == "buy" and hold_status == "hold":
+                    self.update_status(action="too_much_buy", Id=Id)
+                elif action == "sell" and hold_status == "not_hold":
+                    self.update_status(action="too_much_sell", Id=Id)
         return
 
     def get_status(self):
@@ -58,7 +93,7 @@ class Observation:
 
 class Action:
     def __init__(self, stock_num):
-        self.action_dic = {0:"buy", 1:"sell", 2:"hold"}
+        self.action_dic = {0:"buy", 1:"sell", 2:"do_nothing"}
         self.stock_num = stock_num
         self.n = len(self.action_dic) ** stock_num
 
@@ -93,11 +128,11 @@ class Trading_Env:
     def step(self, action):
         actions_list = self.action_space.parse_action(action)
 
-        self.observation_space.update_status(action_list)
+        self.observation_space.update_all_status(action_list, self.step_num)
         s1 = self.get_status()
 
-        reward_info = self.observation_space.get_reward_info()
-        r = self.calculate_reward(reward_info)
+        reward_info = self.observation_space.get_reward_info() # TO-DO
+        r = self.calculate_reward(reward_info) # TO-DO
 
         self.step_num += 1
         d = None
