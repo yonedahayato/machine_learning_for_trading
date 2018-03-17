@@ -147,8 +147,9 @@ class Trading_Env:
         self.step_num = -1
         self.s = -1
 
-    def calculate_reward(self):
-        pass
+    def calculate_reward(self, reward_info):
+        r = reward_info
+        return r
 
     def step(self, action):
         actions_list = self.action_space.parse_action(action)
@@ -158,7 +159,7 @@ class Trading_Env:
         s1 = self.observation_space.get_status()
 
         reward_info = self.observation_space.get_reward_info(step = self.step_num)
-        r = self.calculate_reward(reward_info) # TO-DO
+        r = self.calculate_reward(reward_info)
 
         d = None
         _ = None
@@ -167,11 +168,10 @@ class Trading_Env:
 
     def reset(self):
         self.hold_status = [0]*len(self.stock_data_list)
-        self.observation_space.reset() # TO-DO
+        self.observation_space.reset()
 
-        self.step_num = 0
-        first_state = None
-        return first_state
+        self.step_num = -1
+        return -1
 
 def main():
     TE = Trading_Env()
