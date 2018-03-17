@@ -10,8 +10,9 @@ class Observation:
         stock_data_list = self.load_stock_data(view_data=False)
         self.stock_num = len(stock_data_list)
 
-        self.status = {0:"not_hold", 1:"hold"]
-        self.observation_num = self.stock_num * len(self.status) * self.data_length
+        self.status = {0:"not_hold", 1:"hold"}
+
+        self.observation_num = (len(self.status) ** self.stock_num) * self.data_length
         self.n = self.observation_num
 
         self.penalty = None
@@ -42,7 +43,8 @@ class Observation:
 
     def make_status(self):
         self.hold_status = [0]*self.stock_num
-        self.status_table = np.arange(self.observation_num).reshape(self.data_length, self.stock_num * len(self.status))
+        self.status_table = np.arange(self.observation_num).reshape(self.data_length, len(self.status) ** self.stock_num)
+        self.status_number_table = list(itertools.product([1, 0],repeat=self.stock_num))
 
     def update_status(self, action, Id):
         stock_data_df = self.stock_data_list[Id]
@@ -86,10 +88,32 @@ class Observation:
                     self.update_status(action="too_much_buy", Id=Id)
                 elif action == "sell" and hold_status == "not_hold":
                     self.update_status(action="too_much_sell", Id=Id)
+
+        self.s1 = self.status_number_table.index(self.hold_status)
         return
 
     def get_status(self):
-        pass
+        s1 = self.s1
+        return s1
+
+    def get_reward_info(self, step_num):
+        r = None
+        for Id range(len(self.stock_data_list)):
+            stock_data_df = stock_data_list[Id]
+            if stock_data_df.iloc[step_num, "status"] == "sell":
+                buy_time_id = stock_data_df.loc[stock_data_df["status"]=="buy", "status"].idxmax()
+
+                buy_value = stock_data_df.loc[buy_time_id, "Close"]
+                sell_value = stock_data_df.loc[step_num, "Close"]
+
+                r_tmp = sell_value - buy_value
+            r += r_tmp
+        return r
+
+    def reset(self):
+        self.hold_status = [0]*self.stock_num
+        for Id in range(self.stock_num):
+            self.stock_data_list[Id].loc[:, "status"] = "not_hold"
 
 class Action:
     def __init__(self, stock_num):
@@ -120,21 +144,22 @@ class Trading_Env:
 
         self.action_space = Action(stock_num=stock_num)
 
-        self.step_num = 0
+        self.step_num = -1
+        self.s = -1
 
     def calculate_reward(self):
         pass
 
     def step(self, action):
         actions_list = self.action_space.parse_action(action)
+        self.step_num += 1
 
         self.observation_space.update_all_status(action_list, self.step_num)
-        s1 = self.get_status()
+        s1 = self.observation_space.get_status()
 
-        reward_info = self.observation_space.get_reward_info() # TO-DO
+        reward_info = self.observation_space.get_reward_info(step = self.step_num)
         r = self.calculate_reward(reward_info) # TO-DO
 
-        self.step_num += 1
         d = None
         _ = None
 
@@ -142,6 +167,8 @@ class Trading_Env:
 
     def reset(self):
         self.hold_status = [0]*len(self.stock_data_list)
+        self.observation_space.reset() # TO-DO
+
         self.step_num = 0
         first_state = None
         return first_state
