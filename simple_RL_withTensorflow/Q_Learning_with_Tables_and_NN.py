@@ -2,13 +2,17 @@ import gym
 import numpy as np
 import sys
 
+from trading_env import Trading_Env
+
 class LeinforceRearning():
     def __init__(self, game_name="FrozenLake"):
         if game_name == "FrozenLake":
             self.env = gym.make("FrozenLake-v0")
+
+        elif game_name == "Trading":
+            self.env = Trading_Env()
         else:
-            print("It is invalid game name.")
-            return
+            raise("It is invalid game name.")
 
         print("env.observation_space:{}".format(self.env.observation_space.n))
         print("env.action_space:{}".format(self.env.action_space.n))
@@ -28,6 +32,8 @@ class LeinforceRearning():
         self.lr = 0.8
         self.y = 0.95
         self.num_episodes = 2000
+        # self.num_episodes = 10
+        self.step_num = 200
 
     def initialize_Qtable_with_zeros(self):
         Q = np.zeros([self.env.observation_space.n, self.env.action_space.n])
@@ -94,14 +100,14 @@ class LeinforceRearning():
             j = 0
 
             #The Q-Table learning algorithm
-            while j < 99: # step
+            while j < self.step_num: # step
                 j+=1
 
                 a = self.chose_action_by_greedily_picking_from_Qtable(episode=i)
                 s1, r, d = self.get_new_state_reward_from_environment(action = a)
                 Q = self.update_Qtable_with_new_knowledge(s, a, r, s1)
 
-                # self.status_check(episode=i+1, step=j, Qtable=False)
+                self.status_check(episode=i+1, step=j, Qtable=False)
 
                 rAll += r
                 self.s = s1
@@ -111,12 +117,13 @@ class LeinforceRearning():
 
             self.jList.append(j)
             self.rList.append(rAll)
-            # self.result(self.rList, Qtable=False)
+            self.result(self.rList, Qtable=False)
 
         self.result(self.rList, Qtable=False)
 
 def main():
-    LR = LeinforceRearning(game_name="FrozenLake")
+    # LR = LeinforceRearning(game_name="FrozenLake")
+    LR = LeinforceRearning(game_name="Trading")
     LR.train()
 
 
