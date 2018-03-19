@@ -89,7 +89,8 @@ class Observation:
                 elif action == "sell" and hold_status == "not_hold":
                     self.update_status(action="too_much_sell", Id=Id, step_num=step_num)
 
-        self.s1 = self.status_number_table.index(self.hold_status)
+        status_number = self.status_number_table.index(self.hold_status)
+        self.s1 = self.status_table[step_num, status_number]
 
         return
 
