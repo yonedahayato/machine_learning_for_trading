@@ -126,7 +126,7 @@ class LeinforceRearning():
                 s1, r, d = self.get_new_state_reward_from_environment(action = a)
                 Q = self.update_Qtable_with_new_knowledge(s, a, r, s1)
 
-                # self.status_check(episode=i+1, step=j, Qtable=False)
+                self.status_check(episode=i+1, step=j, Qtable=False)
 
                 actions.append(a)
                 statuses.append(s1)
@@ -141,7 +141,7 @@ class LeinforceRearning():
             self.check_actions.append(actions)
             self.check_statuses.append(statuses)
 
-        self.result(self.rList, Qtable=False, check=True)
+        self.result(self.rList, Qtable=False, check=False)
 
 def main():
     # LR = LeinforceRearning(game_name="FrozenLake")
