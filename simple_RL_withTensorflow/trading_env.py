@@ -24,7 +24,13 @@ class Observation:
         end = "2017-01-01"
 
         nikkei225 = web.DataReader("NIKKEI225", "fred", start, end)
+        nikkei225 = nikkei225.fillna(method='ffill')
+        nikkei225 = nikkei225.fillna(nikkei225.mean())
+
         Djia = web.DataReader("DJIA", "fred", start, end)
+        Djia = Djia.fillna(method='ffill')
+        Djia = Djia.fillna(Djia.mean())
+
         status_df = pd.DataFrame(["not_hold"]*len(nikkei225), index=nikkei225.index, columns=["status"])
 
         nikkei225 = pd.concat([nikkei225, status_df], axis=1)
@@ -51,16 +57,25 @@ class Observation:
 
         if action == "buy":
             self.hold_status[Id] = 1
-            stock_data_df["status"].iloc[step_num] = "hold"
+            # stock_data_df["status"].iloc[step_num] = "hold"
+            stock_data_df["status"].iloc[step_num] = "buy"
 
         elif action == "sell":
             self.hold_status[Id] = 0
-            stock_data_df["status"].iloc[step_num] = "not_hold"
+            # stock_data_df["status"].iloc[step_num] = "not_hold"
+            stock_data_df["status"].iloc[step_num] = "sell"
 
         elif action in ["do_nothing", "too_much_buy", "too_much_sell"]:
             if not step_num == 0:
                 before_status = stock_data_df["status"].iloc[step_num-1]
-                stock_data_df["status"].iloc[step_num] = before_status
+                if before_status == "buy":
+                    stock_data_df["status"].iloc[step_num] = "hold"
+                elif before_status == "sell":
+                    stock_data_df["status"].iloc[step_num] = "not_hold"
+                else:
+                    stock_data_df["status"].iloc[step_num] = before_status
+            else:
+                stock_data_df["status"].iloc[step_num] = "not_hold"
 
             if action in ["too_much_buy", "too_much_sell"]:
                 self.penalty = 100
@@ -103,10 +118,10 @@ class Observation:
         for Id in range(len(self.stock_data_list)):
             stock_data_df = self.stock_data_list[Id]
             if stock_data_df["status"].iloc[step_num] == "sell":
-                buy_time_id = stock_data_df.loc[stock_data_df["status"]=="buy", "status"].idxmax()
+                bought_time = stock_data_df.loc[stock_data_df["status"]=="buy", ["status"]].index
 
-                buy_value = stock_data_df["Close"].loc[buy_time_id]
-                sell_value = stock_data_df["Close"].loc[step_num]
+                buy_value = stock_data_df["Close"].loc[bought_time].values[0]
+                sell_value = stock_data_df["Close"].iloc[step_num]
 
                 r_tmp = sell_value - buy_value
             else:
