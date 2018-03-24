@@ -6,6 +6,7 @@ import sys
 import tensorflow as tf
 
 from trading_env import Trading_Env
+from helper.timer import Timer
 
 class LeinforceRearning():
     def __init__(self, game_name="FrozenLake"):
@@ -37,7 +38,7 @@ class LeinforceRearning():
         self.lr = 0.8
         self.y = 0.95
         self.num_episodes = 2000
-        self.num_episodes = 10
+        # self.num_episodes = 10
         self.step_num = 200
 
     def initialize_Qtable_with_zeros(self):
@@ -105,7 +106,12 @@ class LeinforceRearning():
         Q = self.initialize_Qtable_with_zeros()
         self.set_learning_parameters()
 
+        timer = Timer(num_episodes=self.num_episodes)
+        timer.start(name="all")
+
         for i in range(self.num_episodes):
+            timer.start(name="episode_{}".format(i))
+
             #Reset environment and get first new observation
             s = self.env.reset() # start
             self.s = s
@@ -141,11 +147,16 @@ class LeinforceRearning():
             self.check_actions.append(actions)
             self.check_statuses.append(statuses)
 
+            timer.stop(name="episode_{}".format(i))
+
         self.result(self.rList, Qtable=False, check=False)
 
+        timer.stop(name="all")
+        timer.result_write_csv()
+
 def main():
-    # LR = LeinforceRearning(game_name="FrozenLake")
-    LR = LeinforceRearning(game_name="Trading")
+    LR = LeinforceRearning(game_name="FrozenLake")
+    # LR = LeinforceRearning(game_name="Trading")
     LR.train()
 
 def main_tmp():
