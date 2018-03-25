@@ -1,10 +1,11 @@
+import pandas as pd
 import pandas_datareader.data as web
 
 class Load_Stock_Data():
     def __init__(self):
         pass
 
-	def load_from_PandasDataReader(self, start, end, train_data_num, end_data_num, view_data=False):
+    def load_from_PandasDataReader(self, start, end, train_data_num, test_data_num, view_data=False):
         nikkei225 = web.DataReader("NIKKEI225", "fred", start, end)
         nikkei225 = nikkei225.fillna(method='ffill')
         nikkei225 = nikkei225.fillna(nikkei225.mean())
@@ -38,8 +39,8 @@ class Load_Stock_Data():
         self.stock_data_list_test = stock_data_list_test
         return stock_data_list_train, stock_data_list_test
 
-	def load_from_CSVfile():
-		pass
+    def load_from_CSVfile():
+        pass
 
 def load_stock_data():
     LSD = Load_Stock_Data()
