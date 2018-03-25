@@ -7,14 +7,17 @@ import pandas_datareader.data as web
 from helper.load_stock_data import Load_Stock_Data
 
 class Observation:
-    def __init__(self):
-        self.data_length, self.stock_data_list = None, None
-        stock_data_list_train, stock_data_list_test = self.load_stock_data()
-        self.stock_num = len(stock_data_list_train)
+    def __init__(self, train):
+        self.train = train
+
+        self.data_length = 0
+        stock_data_list = self.load_stock_data()
+
+        self.stock_num = len(stock_data_list)
 
         self.status = {0:"not_hold", 1:"hold"}
 
-        self.observation_num = (len(self.status) ** self.stock_num) * self.train_data_length
+        self.observation_num = (len(self.status) ** self.stock_num) * self.data_length
         self.n = self.observation_num
 
         self.penalty = None
@@ -30,14 +33,17 @@ class Observation:
 
         LSD = Load_Stock_Data()
         stock_data_list_train, stock_data_list_test = \
-            LSD.load_from_PandasDataReader(start, end, train_data_num, end_data_num, view_data=False)
+            LSD.load_from_PandasDataReader(start, end, train_data_num, test_data_num, view_data=False)
 
-        self.train_data_length = LSD.train_data_length
-        self.test_data_length = LSD.test_data_length
+        if self.train:
+            self.data_length = LSD.train_data_length
+            self.stock_data_list = stock_data_list_train
+            return stock_data_list_train
 
-        self.stock_data_list_train = stock_data_list_train
-        self.stock_data_list_test = stock_data_list_test
-        return stock_data_list_train, stock_data_list_test
+        else:
+            self.data_length = LSD.test_data_length
+            self.stock_data = stock_data_list_test
+            return stock_data_list_test
 
     def make_status(self):
         self.hold_status = [0]*self.stock_num
@@ -148,8 +154,9 @@ class Action:
         return actions_list
 
 class Trading_Env:
-    def __init__(self):
-        self.observation_space = Observation()
+    def __init__(self, train):
+        self.train = train
+        self.observation_space = Observation(train=train)
         self.observation_space.make_status()
 
         self.stock_num = self.observation_space.stock_num
