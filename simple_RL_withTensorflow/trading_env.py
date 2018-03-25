@@ -4,48 +4,40 @@ import numpy as np
 import pandas as pd
 import pandas_datareader.data as web
 
+from helper.load_stock_data import Load_Stock_Data
+
 class Observation:
     def __init__(self):
         self.data_length, self.stock_data_list = None, None
-        stock_data_list = self.load_stock_data(view_data=False)
-        self.stock_num = len(stock_data_list)
+        stock_data_list_train, stock_data_list_test = self.load_stock_data()
+        self.stock_num = len(stock_data_list_train)
 
         self.status = {0:"not_hold", 1:"hold"}
 
-        self.observation_num = (len(self.status) ** self.stock_num) * self.data_length
+        self.observation_num = (len(self.status) ** self.stock_num) * self.train_data_length
         self.n = self.observation_num
 
         self.penalty = None
 
-    def load_stock_data(self, view_data=False):
+    def load_stock_data(self):
         # start = datetime.datetime(2016,1,1)
         # end = datetime.date.today()
-        start = "2016-01-01"
+        start = "2015-01-01"
         end = "2017-01-01"
 
-        nikkei225 = web.DataReader("NIKKEI225", "fred", start, end)
-        nikkei225 = nikkei225.fillna(method='ffill')
-        nikkei225 = nikkei225.fillna(nikkei225.mean())
+        train_data_num = 200
+        test_data_num = 200
 
-        Djia = web.DataReader("DJIA", "fred", start, end)
-        Djia = Djia.fillna(method='ffill')
-        Djia = Djia.fillna(Djia.mean())
+        LSD = Load_Stock_Data()
+        stock_data_list_train, stock_data_list_test = \
+            LSD.load_from_PandasDataReader(start, end, train_data_num, end_data_num, view_data=False)
 
-        status_df = pd.DataFrame(["not_hold"]*len(nikkei225), index=nikkei225.index, columns=["status"])
+        self.train_data_length = LSD.train_data_length
+        self.test_data_length = LSD.test_data_length
 
-        nikkei225 = pd.concat([nikkei225, status_df], axis=1)
-        nikkei225.columns = ["Close", "status"]
-        Djia = pd.concat([Djia, status_df], axis=1)
-        Djia.columns = ["Close", "status"]
-
-        self.data_length = len(nikkei225)
-
-        if view_data:
-            print(nikkei225)
-
-        stock_data_list = [Djia, nikkei225]
-        self.stock_data_list = stock_data_list
-        return stock_data_list
+        self.stock_data_list_train = stock_data_list_train
+        self.stock_data_list_test = stock_data_list_test
+        return stock_data_list_train, stock_data_list_test
 
     def make_status(self):
         self.hold_status = [0]*self.stock_num
