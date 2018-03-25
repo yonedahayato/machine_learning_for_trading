@@ -11,15 +11,14 @@ from helper.timer import Timer
 class LeinforceRearning():
     def __init__(self, game_name="FrozenLake"):
         if game_name == "FrozenLake":
-            self.env = gym.make("FrozenLake-v0")
+            self.train_env = gym.make("FrozenLake-v0")
+            self.test_env = gym.make("FrozenLake-v0")
 
         elif game_name == "Trading":
-            self.env = Trading_Env()
+            self.train_env = Trading_Env(Train=True)
+            self.test_env = Trading_Env(Train=False)
         else:
             raise("It is invalid game name.")
-
-        print("env.observation_space:{}".format(self.env.observation_space.n))
-        print("env.action_space:{}".format(self.env.action_space.n))
 
         #create lists to contain total rewards and steps per episode
         self.jList = []
@@ -38,11 +37,11 @@ class LeinforceRearning():
         self.lr = 0.8
         self.y = 0.95
         self.num_episodes = 2000
-        # self.num_episodes = 10
+        self.num_episodes = 10
         self.step_num = 200
 
     def initialize_Qtable_with_zeros(self):
-        Q = np.zeros([self.env.observation_space.n, self.env.action_space.n])
+        Q = np.zeros([self.train_env.observation_space.n, self.train_env.action_space.n])
 
         self.Q = Q
         return Q
@@ -58,15 +57,23 @@ class LeinforceRearning():
         print("state1:{}".format(self.s1))
         print("reward:{}".format(self.r))
 
-    def chose_action_by_greedily_picking_from_Qtable(self, episode):
+    def chose_action_by_greedily_picking_from_Qtable(self, episode, train=True):
         #Choose an action by greedily (with noise) picking from Q table
-        a = np.argmax(self.Q[self.s,:] + np.random.randn(1,self.env.action_space.n)*(1./(episode+1)))
+        if train:
+            a = np.argmax(self.Q[self.s,:] + np.random.randn(1,self.train_env.action_space.n)*(1./(episode+1)))
+        else:
+            a = np.argmax(self.Q[self.s,:] + np.random.randn(1,self.test_env.action_space.n)*(1./(episode+1)))
+
         self.a = a
         return a
 
-    def get_new_state_reward_from_environment(self, action):
+    def get_new_state_reward_from_environment(self, action, train=True):
         #Get new state and reward from environment
-        s1, r, d, _ = self.env.step(action)
+        if train:
+            s1, r, d, _ = self.train_env.step(action)
+        else:
+            s1, r, d, _ = self.test_env.step(action)
+
         self.s1 = s1
         self.r = r
         self.d = d
@@ -84,7 +91,7 @@ class LeinforceRearning():
         self.Q = Q.copy()
         return Q
 
-    def result(self, rList, Qtable=False, check=False):
+    def result(self, rList, Qtable=False, check=False, train=True):
         print("Score over time: " + str(sum(rList)/self.num_episodes))
         print("Step num over time: " + str(sum(self.jList)/self.num_episodes))
         if Qtable:
@@ -92,31 +99,34 @@ class LeinforceRearning():
             print(self.Q)
 
         if check:
+            if train:
+                env = self.train_env
+            else:
+                env = self.test_env
+
             print("action_space.n")
-            print(self.env.action_space.n)
+            print(env.action_space.n)
             print("actions")
-            print(self.check_actions)
+            print(check_actions)
 
             print("observation_space.n")
-            print(self.env.observation_space.n)
+            print(env.observation_space.n)
             print("statuses")
-            print(self.check_statuses)
+            print(check_statuses)
 
     def train(self):
         Q = self.initialize_Qtable_with_zeros()
         self.set_learning_parameters()
 
-        timer = Timer(num_episodes=self.num_episodes)
-        timer.start(name="all")
+        timer = Timer()
+        timer.start(name="train_all")
 
         for i in range(self.num_episodes):
-            timer.start(name="episode_{}".format(i))
+            timer.start(name="train_episode_{}".format(i))
 
             #Reset environment and get first new observation
-            s = self.env.reset() # start
+            s = self.train_env.reset() # start
             self.s = s
-
-            # self.status_check(episode=i+1, step=0, Qtable=True)
 
             rAll = 0
             d = False
@@ -128,8 +138,8 @@ class LeinforceRearning():
             while j < self.step_num: # step
                 j+=1
 
-                a = self.chose_action_by_greedily_picking_from_Qtable(episode=i)
-                s1, r, d = self.get_new_state_reward_from_environment(action = a)
+                a = self.chose_action_by_greedily_picking_from_Qtable(episode=i, train=True)
+                s1, r, d = self.get_new_state_reward_from_environment(action = a, train=True)
                 Q = self.update_Qtable_with_new_knowledge(s, a, r, s1)
 
                 self.status_check(episode=i+1, step=j, Qtable=False)
@@ -147,17 +157,50 @@ class LeinforceRearning():
             self.check_actions.append(actions)
             self.check_statuses.append(statuses)
 
-            timer.stop(name="episode_{}".format(i))
+            timer.stop(name="train_episode_{}".format(i))
 
-        self.result(self.rList, Qtable=False, check=False)
+        self.result(self.rList, Qtable=False, check=False, train=True)
 
-        timer.stop(name="all")
+        timer.stop(name="train_all")
+        timer.result_write_csv()
+
+    def test(self):
+        Q = self.Q
+        timer = Timer()
+        timer.start(name="test")
+
+        s = self.test_env.reset() # start
+        self.s = s
+
+        rAll = 0
+        d = False
+        j = 0
+
+        while j < self.step_num: # step
+            j+=1
+
+            a = self.chose_action_by_greedily_picking_from_Qtable(episode=self.num_episodes, train=False)
+            s1, r, d = self.get_new_state_reward_from_environment(action = a, train=False)
+            Q = self.update_Qtable_with_new_knowledge(s, a, r, s1)
+
+            # self.status_check(episode="test", step=j, Qtable=False)
+
+            rAll += r
+            self.s = s1
+            s = s1
+            if d == True:
+                break
+
+        print("test resutl {}".format(rAll))
+
+        timer.stop(name="test")
         timer.result_write_csv()
 
 def main():
     LR = LeinforceRearning(game_name="FrozenLake")
     # LR = LeinforceRearning(game_name="Trading")
     LR.train()
+    LR.test()
 
 def main_tmp():
 
