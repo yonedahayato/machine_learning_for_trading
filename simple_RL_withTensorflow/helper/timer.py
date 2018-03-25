@@ -5,8 +5,7 @@ import os
 import time
 
 class Timer():
-    def __init__(self, num_episodes):
-        self.num_episodes = num_episodes
+    def __init__(self):
         self.start_time = ""
 
         self.result_dict_tmp = {"name": "", "start_time": "", "elapsed_time": ""} # deepcopyで使用
@@ -72,7 +71,7 @@ class Timer():
                 writer.writerow(result_dict)
 
 def time_measure():
-    timer = Timer(num_episodes=10)
+    timer = Timer()
 
     for cnt in range(5):
         timer.start(name=cnt)
