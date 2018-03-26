@@ -15,8 +15,8 @@ class LeinforceRearning():
             self.test_env = gym.make("FrozenLake-v0")
 
         elif game_name == "Trading":
-            self.train_env = Trading_Env(Train=True)
-            self.test_env = Trading_Env(Train=False)
+            self.train_env = Trading_Env(train=True)
+            self.test_env = Trading_Env(train=False)
         else:
             raise("It is invalid game name.")
 
@@ -32,6 +32,9 @@ class LeinforceRearning():
         self.check_statuses = []
 
         self.d = None
+
+    def set_parameters(self, **params):
+        self.num_episodes = params["num_episodes"]
 
     def set_learning_parameters(self):
         self.lr = 0.8
