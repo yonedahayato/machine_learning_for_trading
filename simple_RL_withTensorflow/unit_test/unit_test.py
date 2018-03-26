@@ -6,6 +6,7 @@ import unittest
 pardir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(pardir)
 from trading_env import Trading_Env
+from Q_Learning_with_Tables_and_NN import LeinforceRearning
 
 class test_name(TestCase):
     @classmethod
@@ -54,7 +55,7 @@ class test_name(TestCase):
             print("compare_check:{}".format(data1 == data2))
 
     def test_load_stock_data(self):
-        env = Trading_Env()
+        env = Trading_Env(train=True)
         stock_data_list = env.observation_space.stock_data_list
         size_list = []
         for stock_data in stock_data_list:
@@ -62,6 +63,12 @@ class test_name(TestCase):
             print(stock_data)
 
         print(size_list)
+
+    def test_check_profit_result(self):
+        LR = LeinforceRearning(game_name="Trading")
+        LR.set_parameters(num_episodes=3)
+        LR.train()
+        print(LR.rList)
 
     @unittest.skip("skip message <skipもできる>")
     def test_skip(self):
