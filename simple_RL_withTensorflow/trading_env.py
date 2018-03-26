@@ -183,7 +183,9 @@ class Trading_Env:
 
         if self.step_num == self.data_length-1:
             d = True
-            return
+            _ = None
+
+            return s1, r, d, _
 
         d = None
         _ = None
