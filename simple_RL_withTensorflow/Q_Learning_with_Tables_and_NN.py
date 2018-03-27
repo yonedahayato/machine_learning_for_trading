@@ -33,6 +33,8 @@ class LeinforceRearning():
 
         self.d = None
 
+        self.set_learning_parameters()
+
     def set_parameters(self, **params):
         self.num_episodes = params["num_episodes"]
 
@@ -119,7 +121,6 @@ class LeinforceRearning():
 
     def train(self):
         Q = self.initialize_Qtable_with_zeros()
-        self.set_learning_parameters()
 
         timer = Timer()
         timer.start(name="train_all")
