@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 import sys
 from unittest import TestCase, main
 import unittest
@@ -54,26 +55,85 @@ class test_name(TestCase):
         else:
             print("compare_check:{}".format(data1 == data2))
 
+    @unittest.skip("tmp")
     def test_load_stock_data(self):
         env = Trading_Env(train=True)
         stock_data_list = env.observation_space.stock_data_list
         size_list = []
         for stock_data in stock_data_list:
             size_list.append(stock_data.shape)
-            print(stock_data)
 
         print(size_list)
+
+    def check_profit_result(self, stock_data_df):
+        status = "not_hold"
+        error_list = []
+        error_template = "Id: {}, status: {}, new_status: {}"
+        success_cnt = 0
+
+        buy_value = 0
+        close = 0
+        profit = 0
+
+        for Id in range(len(stock_data_df)):
+            new_status = stock_data_df["status"].iloc[Id]
+            new_close = stock_data_df["Close"].iloc[Id]
+
+            if status == "not_hold" and new_status in ["hold", "sell"]:
+                error_list.append(error_template.format(Id, status, new_status))
+            elif status == "hold" and new_status in ["not_hold", "buy"]:
+                error_list.append(error_template.format(Id, status, new_status))
+            elif status == "buy" and new_status in ["not_hold", "buy"]:
+                error_list.append(error_template.format(Id, status, new_status))
+            elif status == "sell" and new_status in ["hold", "sell"]:
+                error_list.append(error_template.format(Id, status, new_status))
+            else:
+                success_cnt += 1
+                if new_status == "buy":
+                    buy_value = new_close
+                elif new_status == "sell":
+                    profit += (new_close - buy_value)
+
+            status = new_status
+            close = new_close
+
+        if success_cnt != len(stock_data_df):
+            error_list.appned("error: success_cnt != len(stock_data_df)")
+
+        return profit, error_list
 
     def test_check_profit_result(self):
         LR = LeinforceRearning(game_name="Trading")
         LR.set_parameters(num_episodes=3)
         LR.train()
         print(LR.rList)
+        pd.options.display.max_rows = 1000
+
+        error_list = []
+        error_cnt = 0
+        profit = 0
+        last_stock_data_list = LR.train_env.observation_space.stock_data_list
+        for stock_id, stock_data_df in enumerate(last_stock_data_list):
+            profit_tmp, error_list_tmp = self.check_profit_result(stock_data_df)
+
+            profit += profit_tmp
+            error_list.append(error_list_tmp)
+            if len(error_list_tmp) != 0:
+                error_cnt += 1
+
+        if (error_cnt != 0) or (LR.rList[-1] != profit):
+            print("error, error_cnt: {}, LR.rList[-1]: {}, profit: {}".format(error_cnt, LR.rList[-1], profit))
+            result = False
+        else:
+            result = True
+
+        self.assertTrue(result)
 
     @unittest.skip("skip message <skipもできる>")
     def test_skip(self):
         print("skip")
 
+    @unittest.skip("skip message <skipもできる>")
     def test_subTest(self):
         def same_value(x):
             return x
