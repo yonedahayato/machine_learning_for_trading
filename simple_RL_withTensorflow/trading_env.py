@@ -11,6 +11,7 @@ class Observation:
         self.train = train
 
         self.data_length = 0
+        self.stock_data_list = []
         stock_data_list = self.load_stock_data()
 
         self.stock_num = len(stock_data_list)
@@ -118,7 +119,7 @@ class Observation:
             if stock_data_df["status"].iloc[step_num] == "sell":
                 bought_time = stock_data_df.loc[stock_data_df["status"]=="buy", ["status"]].index
 
-                buy_value = stock_data_df["Close"].loc[bought_time].values[0]
+                buy_value = stock_data_df["Close"].loc[bought_time].values[-1]
                 sell_value = stock_data_df["Close"].iloc[step_num]
 
                 r_tmp = sell_value - buy_value
