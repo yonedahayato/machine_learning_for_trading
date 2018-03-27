@@ -42,7 +42,7 @@ class Observation:
 
         else:
             self.data_length = LSD.test_data_length
-            self.stock_data = stock_data_list_test
+            self.stock_data_list = stock_data_list_test
             return stock_data_list_test
 
     def make_status(self):
