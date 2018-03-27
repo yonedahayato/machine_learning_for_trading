@@ -40,7 +40,7 @@ class LeinforceRearning():
         self.lr = 0.8
         self.y = 0.95
         self.num_episodes = 2000
-        self.num_episodes = 10
+        # self.num_episodes = 10
         self.step_num = 200
 
     def initialize_Qtable_with_zeros(self):
@@ -200,8 +200,8 @@ class LeinforceRearning():
         timer.result_write_csv()
 
 def main():
-    LR = LeinforceRearning(game_name="FrozenLake")
-    # LR = LeinforceRearning(game_name="Trading")
+    # LR = LeinforceRearning(game_name="FrozenLake")
+    LR = LeinforceRearning(game_name="Trading")
     LR.train()
     LR.test()
 
