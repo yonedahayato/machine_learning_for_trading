@@ -5,8 +5,9 @@ import random
 import sys
 import tensorflow as tf
 
-from trading_env import Trading_Env
+from helper.make_graph import Make_Graph
 from helper.timer import Timer
+from trading_env import Trading_Env
 
 class LeinforceRearning():
     def __init__(self, game_name="FrozenLake"):
@@ -122,6 +123,7 @@ class LeinforceRearning():
     def train(self):
         Q = self.initialize_Qtable_with_zeros()
 
+        mg = Make_Graph(file_name="train_reward", Id_name="episode", value_name="reward")
         timer = Timer()
         timer.start(name="train_all")
 
@@ -162,11 +164,13 @@ class LeinforceRearning():
             self.check_statuses.append(statuses)
 
             timer.stop(name="train_episode_{}".format(i))
+            mg.data_input(Id=i, value=rAll)
 
         self.result(self.rList, Qtable=False, check=False, train=True)
 
         timer.stop(name="train_all")
         timer.result_write_csv()
+        mg.save_line_graph()
 
     def test(self):
         Q = self.Q
