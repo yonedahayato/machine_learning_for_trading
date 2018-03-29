@@ -107,7 +107,7 @@ class test_name(TestCase):
         LR.set_parameters(num_episodes=3)
         LR.train()
         LR.test()
-        print(LR.rList)
+        LR.result(Qtable=False, check=False, train=True)
         pd.options.display.max_rows = 1000
 
         error_list = []
