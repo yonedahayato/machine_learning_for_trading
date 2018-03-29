@@ -106,6 +106,7 @@ class test_name(TestCase):
         LR = LeinforceRearning(game_name="Trading")
         LR.set_parameters(num_episodes=3)
         LR.train()
+        LR.test()
         print(LR.rList)
         pd.options.display.max_rows = 1000
 
