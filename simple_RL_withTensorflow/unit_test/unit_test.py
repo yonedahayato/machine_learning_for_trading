@@ -7,7 +7,7 @@ import unittest
 pardir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(pardir)
 from trading_env import Trading_Env
-from Q_Learning_with_Tables_and_NN import LeinforceRearning
+from Q_Learning_with_Tables_and_NN import ReinforceLearning
 
 class test_name(TestCase):
     @classmethod
@@ -103,17 +103,17 @@ class test_name(TestCase):
         return profit, error_list
 
     def test_check_profit_result(self):
-        LR = LeinforceRearning(game_name="Trading")
-        LR.set_parameters(num_episodes=3)
-        LR.train()
-        LR.test()
-        LR.result(Qtable=False, check=False, train=True)
+        RL = ReinforceLearning(game_name="Trading")
+        RL.set_parameters(num_episodes=3)
+        RL.train()
+        RL.test()
+        RL.result(Qtable=False, check=False, train=True)
         pd.options.display.max_rows = 1000
 
         error_list = []
         error_cnt = 0
         profit = 0
-        last_stock_data_list = LR.train_env.observation_space.stock_data_list
+        last_stock_data_list = RL.train_env.observation_space.stock_data_list
         for stock_id, stock_data_df in enumerate(last_stock_data_list):
             profit_tmp, error_list_tmp = self.check_profit_result(stock_data_df)
 
@@ -122,8 +122,8 @@ class test_name(TestCase):
             if len(error_list_tmp) != 0:
                 error_cnt += 1
 
-        if (error_cnt != 0) or (LR.rList[-1] != profit):
-            print("error, error_cnt: {}, LR.rList[-1]: {}, profit: {}".format(error_cnt, LR.rList[-1], profit))
+        if (error_cnt != 0) or (RL.rList[-1] != profit):
+            print("error, error_cnt: {}, RL.rList[-1]: {}, profit: {}".format(error_cnt, RL.rList[-1], profit))
             result = False
         else:
             result = True

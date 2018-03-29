@@ -9,7 +9,7 @@ from helper.make_graph import Make_Graph
 from helper.timer import Timer
 from trading_env import Trading_Env
 
-class LeinforceRearning():
+class ReinforceLearning():
     def __init__(self, game_name="FrozenLake"):
         self.game_name = game_name
         if game_name == "FrozenLake":
@@ -223,11 +223,11 @@ class LeinforceRearning():
                 mg_chart_graph.save_chart_graph(stock_data_df)
 
 def main():
-    # LR = LeinforceRearning(game_name="FrozenLake")
-    LR = LeinforceRearning(game_name="Trading")
-    LR.train()
-    LR.test()
-    LR.result(Qtable=False, check=False, train=True)
+    # RL = ReinforceLearning(game_name="FrozenLake")
+    RL = ReinforceLearning(game_name="Trading")
+    RL.train()
+    RL.test()
+    RL.result(Qtable=False, check=False, train=True)
 
 def main_tmp():
 
