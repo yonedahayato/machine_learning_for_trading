@@ -11,6 +11,7 @@ from trading_env import Trading_Env
 
 class LeinforceRearning():
     def __init__(self, game_name="FrozenLake"):
+        self.game_name = game_name
         if game_name == "FrozenLake":
             self.train_env = gym.make("FrozenLake-v0")
             self.test_env = gym.make("FrozenLake-v0")
@@ -97,8 +98,8 @@ class LeinforceRearning():
         self.Q = Q.copy()
         return Q
 
-    def result(self, rList, Qtable=False, check=False, train=True):
-        print("Score over time: " + str(sum(rList)/self.num_episodes))
+    def result(self, Qtable=False, check=False, train=True):
+        print("Score over time: " + str(sum(self.rList)/self.num_episodes))
         print("Step num over time: " + str(sum(self.jList)/self.num_episodes))
         if Qtable:
             print("Final Q-Table Values")
@@ -123,7 +124,7 @@ class LeinforceRearning():
     def train(self):
         Q = self.initialize_Qtable_with_zeros()
 
-        mg = Make_Graph(file_name="train_reward", Id_name="episode", value_name="reward")
+        mg_train_reward = Make_Graph(file_name="train_reward", Id_name="episode", value_name="reward")
         timer = Timer()
         timer.start(name="train_all")
 
@@ -164,13 +165,24 @@ class LeinforceRearning():
             self.check_statuses.append(statuses)
 
             timer.stop(name="train_episode_{}".format(i))
-            mg.data_input(Id=i, value=rAll)
+            mg_train_reward.data_input(Id=i, value=rAll)
 
-        self.result(self.rList, Qtable=False, check=False, train=True)
+            if self.game_name == "Trading":
+                if rAll >= max(self.rList):
+                    best_reward_trading_stock_list = self.train_env.observation_space.stock_data_list
+                    best_episode = i
+
+        self.result(Qtable=False, check=False, train=True)
 
         timer.stop(name="train_all")
         timer.result_write_csv()
-        mg.save_line_graph()
+        mg_train_reward.save_line_graph()
+
+        if self.game_name == "Trading":
+            for cnt, stock_data_df in enumerate(best_reward_trading_stock_list):
+                mg_chart_graph = Make_Graph(file_name="best_reward_chart_graph_stock_train:{}_episode:{}".format(cnt, best_episode), \
+                                    Id_name="date", value_name="close")
+                mg_chart_graph.save_chart_graph(stock_data_df)
 
     def test(self):
         Q = self.Q
@@ -191,7 +203,7 @@ class LeinforceRearning():
             s1, r, d = self.get_new_state_reward_from_environment(action = a, train=False)
             Q = self.update_Qtable_with_new_knowledge(s, a, r, s1)
 
-            # self.status_check(episode="test", step=j, Qtable=False)
+            self.status_check(episode="test", step=j, Qtable=False)
 
             rAll += r
             self.s = s1
@@ -204,11 +216,18 @@ class LeinforceRearning():
         timer.stop(name="test")
         timer.result_write_csv()
 
+        if self.game_name == "Trading":
+            for cnt, stock_data_df in enumerate(self.test_env.observation_space.stock_data_list):
+                mg_chart_graph = Make_Graph(file_name="best_reward_chart_graph_stock_test:{}".format(cnt), \
+                                    Id_name="date", value_name="close")
+                mg_chart_graph.save_chart_graph(stock_data_df)
+
 def main():
     # LR = LeinforceRearning(game_name="FrozenLake")
     LR = LeinforceRearning(game_name="Trading")
     LR.train()
     LR.test()
+    LR.result(Qtable=False, check=False, train=True)
 
 def main_tmp():
 
