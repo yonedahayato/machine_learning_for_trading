@@ -130,6 +130,12 @@ class test_name(TestCase):
 
         self.assertTrue(result)
 
+    def test_frozenlake(self):
+        RL = ReinforceLearning(game_name="FrozenLake")
+        RL.train()
+        RL.test()
+        RL.result(Qtable=False, check=False, train=True)
+
     @unittest.skip("skip message <skipもできる>")
     def test_skip(self):
         print("skip")
