@@ -64,6 +64,18 @@ class ReinforceLearning():
         print("state1:{}".format(self.s1))
         print("reward:{}".format(self.r))
 
+    def reset_environment_and_get_first_new_observation(self):
+        s = self.train_env.reset()
+        self.s = s
+
+        rAll = 0
+        d = False
+        j = 0
+        actions = []
+        statuses = [s]
+
+        return rAll, d, j, actions, statuses, s
+
     def chose_action_by_greedily_picking_from_Qtable(self, episode, train=True):
         #Choose an action by greedily (with noise) picking from Q table
         if train:
@@ -131,15 +143,7 @@ class ReinforceLearning():
         for i in range(self.num_episodes):
             timer.start(name="train_episode_{}".format(i))
 
-            #Reset environment and get first new observation
-            s = self.train_env.reset() # start
-            self.s = s
-
-            rAll = 0
-            d = False
-            j = 0
-            actions = []
-            statuses = [s]
+            rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation()
 
             #The Q-Table learning algorithm
             while j < self.step_num: # step
@@ -236,8 +240,7 @@ def main_tmp():
     tf.reset_default_graph()
 
     #These lines establish the feed-forward part of the network used to choose actions
-    action_num = 16
-    inputs1 = tf.placeholder(shape=[1,action_num],dtype=tf.float32)
+    inputs1 = tf.placeholder(shape=[1, self.train_env.action_space.n],dtype=tf.float32)
     W = tf.Variable(tf.random_uniform([16,4],0,0.01))
     Qout = tf.matmul(inputs1,W)
     predict = tf.argmax(Qout,1)
