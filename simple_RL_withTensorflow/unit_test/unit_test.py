@@ -1,13 +1,16 @@
 import os
 import pandas as pd
+import shutil
 import sys
 from unittest import TestCase, main
 import unittest
 
 pardir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(pardir)
+sys.path.extend(["../helper", "./helper"])
 from trading_env import Trading_Env
 from Q_Learning_with_Tables_and_NN import ReinforceLearning
+from load_stock_data import Load_Stock_Data
 
 class test_name(TestCase):
     @classmethod
@@ -64,6 +67,26 @@ class test_name(TestCase):
             size_list.append(stock_data.shape)
 
         print(size_list)
+
+    def test_load_stock_data_from_CSVfile_case1(self):
+        save_path = "./helper/stock_data"
+        if os.path.exists(save_path):
+            shutil.rmtree(save_path)
+
+        LSD = Load_Stock_Data(save=True)
+
+        start = "2015-01-01"
+        end = "2017-01-01"
+
+        train_data_num = 200
+        test_data_num = 200
+
+        stock_data_list_train, stock_data_list_test = \
+            LSD.load_from_PandasDataReader(start, end, train_data_num, test_data_num, view_data=True)
+
+        LSD_formCSV = Load_Stock_Data(save=True)
+
+        stock_data_list_train, stock_data_list_test = LSD_formCSV.load_from_CSVfiles()
 
     def check_profit_result(self, stock_data_df):
         status = "not_hold"
