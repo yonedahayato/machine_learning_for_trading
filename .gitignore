@@ -1,5 +1,6 @@
 */__pycache__
-*/helper/graph/
-*/helper/time_measure_result/
 */helper/__pycache__
+*/helper/graph/
+*/helper/stock_data/
+*/helper/time_measure_result/
 */unit_test/unit_test_python_template/
