@@ -3,6 +3,7 @@ import itertools
 import numpy as np
 import pandas as pd
 import pandas_datareader.data as web
+import random
 
 from helper.load_stock_data import Load_Stock_Data
 
@@ -19,7 +20,7 @@ class Observation:
         self.status = {0:"not_hold", 1:"hold"}
 
         self.observation_num = (len(self.status) ** self.stock_num) * self.data_length
-        self.n = self.observation_num
+        self.n = self.observation_num + 1
 
         self.penalty = None
 
@@ -153,6 +154,10 @@ class Action:
             actions_list.append(self.action_dic[action_num])
 
         return actions_list
+
+    def sample(self):
+        action = random.randrange(self.n)
+        return action
 
 class Trading_Env:
     def __init__(self, train):
