@@ -23,6 +23,11 @@ class Make_Graph:
         if not os.path.exists(self.save_path):
             os.mkdir(self.save_path)
 
+        now = dt.now()
+        self.save_path = self.save_path + "/" + now.strftime("%Y-%m-%d")
+        if not os.path.exists(self.save_path):
+            os.mkdir(self.save_path)
+
     def data_input(self, Id, value):
         self.Id_list.append(Id)
         self.value_list.append(value)
