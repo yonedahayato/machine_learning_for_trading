@@ -5,7 +5,7 @@ import os
 import time
 
 class Timer():
-    def __init__(self):
+    def __init__(self, file_name=""):
         self.start_time = ""
 
         self.result_dict_tmp = {"name": "", "start_time": "", "elapsed_time": ""} # deepcopyで使用
@@ -14,6 +14,8 @@ class Timer():
 
         self.result_path = ""
         self.setting_result_path()
+
+        self.file_name = file_name
 
     def setting_result_path(self):
         if os.path.exists("./helper"):
@@ -62,8 +64,8 @@ class Timer():
 
     def result_write_csv(self):
         now = dt.now()
-        now_str = now.strftime("%Y-%m-%d-%H-%M")
-        file_name = self.result_path + "/" + now_str + ".csv"
+        now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
+        file_name = self.result_path + "/" + self.file_name +"_"+ now_str + ".csv"
         with open(file_name, "w") as f:
             writer = csv.DictWriter(f, self.result_dict_tmp.keys())
             writer.writeheader()
