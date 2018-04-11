@@ -28,7 +28,7 @@ class Timer():
 
     def start(self, name=None):
         if "name" == None:
-            raise("[Timer, start]: name is invalid.")
+            raise Exception("[Timer, start]: name is invalid.")
 
         result_dict = copy.deepcopy(self.result_dict_tmp)
 
@@ -45,7 +45,7 @@ class Timer():
         if (name == None) or (name not in self.result_name_list):
             print("name list")
             print(self.result_name_list)
-            raise("[Timer, stop]: name is invalid.")
+            raise Exception("[Timer, stop]: name is invalid.")
 
         Index = self.result_name_list.index(name)
         result_dict = self.results_list[Index]
