@@ -438,7 +438,7 @@ def main():
     RL.test()
     RL.result(Qtable=False, check=False, train=True)
 
-def main_tmp():
+def main_NN():
     # RL_NN = ReinforceLearning_NN(game_name="FrozenLake")
     RL_NN = ReinforceLearning_NN(game_name="Trading")
     RL_NN.train()
@@ -447,4 +447,4 @@ def main_tmp():
 
 if __name__ == "__main__":
     # main()
-    main_tmp()
+    main_NN()
