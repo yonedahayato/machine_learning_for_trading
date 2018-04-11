@@ -6,6 +6,7 @@ import sys
 import tensorflow as tf
 
 from helper.make_graph import Make_Graph
+from helper.paramas_save_load import *
 from helper.timer import Timer
 from trading_env import Trading_Env
 
@@ -64,8 +65,11 @@ class ReinforceLearning():
         print("state1:{}".format(self.s1))
         print("reward:{}".format(self.r))
 
-    def reset_environment_and_get_first_new_observation(self):
-        s = self.train_env.reset()
+    def reset_environment_and_get_first_new_observation(self, train=True):
+        if train:
+            s = self.train_env.reset()
+        else:
+            s = self.test_env.reset()
         self.s = s
 
         rAll = 0
@@ -111,8 +115,10 @@ class ReinforceLearning():
         return Q
 
     def result(self, Qtable=False, check=False, train=True):
+        print("="*5 + " resutl " + "="*5)
         print("Score over time: " + str(sum(self.rList)/self.num_episodes))
         print("Step num over time: " + str(sum(self.jList)/self.num_episodes))
+
         if Qtable:
             print("Final Q-Table Values")
             print(self.Q)
@@ -134,6 +140,7 @@ class ReinforceLearning():
             print(check_statuses)
 
     def train(self):
+        train_f = True
         Q = self.initialize_Qtable_with_zeros()
 
         mg_train_reward = Make_Graph(file_name="train_reward", Id_name="episode", value_name="reward")
@@ -143,14 +150,14 @@ class ReinforceLearning():
         for i in range(self.num_episodes):
             timer.start(name="train_episode_{}".format(i))
 
-            rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation()
+            rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation(train=train_f)
 
             #The Q-Table learning algorithm
             while j < self.step_num: # step
                 j+=1
 
-                a = self.choose_action_by_greedily_picking_from_Qtable(episode=i, train=True)
-                s1, r, d = self.get_new_state_reward_from_environment(action = a, train=True)
+                a = self.choose_action_by_greedily_picking_from_Qtable(episode=i, train=train_f)
+                s1, r, d = self.get_new_state_reward_from_environment(action = a, train=train_f)
                 Q = self.update_Qtable_with_new_knowledge(s, a, r, s1)
 
                 self.status_check(episode=i+1, step=j, Qtable=False)
@@ -175,7 +182,7 @@ class ReinforceLearning():
                     best_reward_trading_stock_list = self.train_env.observation_space.stock_data_list
                     best_episode = i
 
-        self.result(Qtable=False, check=False, train=True)
+        self.result(Qtable=False, check=False, train=train_f)
 
         timer.stop(name="train_all")
         timer.result_write_csv()
@@ -188,22 +195,19 @@ class ReinforceLearning():
                 mg_chart_graph.save_chart_graph(stock_data_df)
 
     def test(self):
+        train_f = False
+
         Q = self.Q
         timer = Timer(file_name="test")
         timer.start(name="test")
 
-        s = self.test_env.reset() # start
-        self.s = s
-
-        rAll = 0
-        d = False
-        j = 0
+        rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation(train=train_f)
 
         while j < self.step_num: # step
             j+=1
 
-            a = self.choose_action_by_greedily_picking_from_Qtable(episode=self.num_episodes, train=False)
-            s1, r, d = self.get_new_state_reward_from_environment(action = a, train=False)
+            a = self.choose_action_by_greedily_picking_from_Qtable(episode=self.num_episodes, train=train_f)
+            s1, r, d = self.get_new_state_reward_from_environment(action = a, train=train_f)
             Q = self.update_Qtable_with_new_knowledge(s, a, r, s1)
 
             self.status_check(episode="test", step=j, Qtable=False)
@@ -214,6 +218,7 @@ class ReinforceLearning():
             if d == True:
                 break
 
+        print("="*10)
         print("test resutl {}".format(rAll))
 
         timer.stop(name="test")
@@ -252,8 +257,8 @@ class ReinforceLearning_NN(ReinforceLearning):
     def set_learning_parameters(self):
         self.y = .99
         self.e = 0.1
-        # self.num_episodes = 2000
-        self.num_episodes = 10
+        self.num_episodes = 4000
+        # self.num_episodes = 10
         self.step_num = 200
 
     def ajust_status_no(self, s, network=""):
@@ -307,41 +312,49 @@ class ReinforceLearning_NN(ReinforceLearning):
 
     def print_result(self):
         print("Percent of succesful episodes: " + str(sum(self.rList) / self.num_episodes) + "%")
-        plt.plot(self.rList)
 
     def train(self):
+        train_f = True
+
         mg_train_reward = Make_Graph(file_name="train_reward", Id_name="episode", value_name="reward")
         timer = Timer(file_name="train")
         timer.start(name="train_all")
 
         with tf.Session() as sess:
             self.sess = sess
-            sess.run(self.init)
+
+            try:
+                sess_file = "2018-04-11-09-27-12/Q_Learning.ckpt"
+                lp = Load_Params()
+                lp.load(sess, file_name=sess_file)
+            except Exception as e:
+                print(e)
+                sess.run(self.init)
 
             for i in range(self.num_episodes):
                 timer.start(name="train_episode_{}".format(i))
 
                 #Reset environment and get first new observation
-                rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation()
+                rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation(train=train_f)
 
                 #The Q-Network
                 while j < self.step_num:
                     j+=1
 
-                    a, allQ = self.choose_action_by_greedily_from_the_QNetwork(s, train=True)
-                    s1, r, d = self.get_new_state_reward_from_environment(a[0], train=True)
+                    a, allQ = self.choose_action_by_greedily_from_the_QNetwork(s, train=train_f)
+                    s1, r, d = self.get_new_state_reward_from_environment(a[0], train=train_f)
                     s1 = self.ajust_status_no(s1, network="output")
                     self.s1 = s1
 
                     targetQ = self.set_target_value_for_chosen_action(s1, allQ, a)
                     self.train_network_using_target_predicted_Q_values(s)
 
-                    self.status_check(episode=i+1, step=j, Qtable=False)
+                    # self.status_check(episode=i+1, step=j, Qtable=False)
                     rAll += r
                     self.s, s = s1, s1
 
                     if d == True:
-                        #Reduce chance of random action as we train the model.
+                        # Reduce chance of random action as we train the model.
                         self.e = 1./((i/50) + 10)
                         break
 
@@ -356,6 +369,9 @@ class ReinforceLearning_NN(ReinforceLearning):
                         best_reward_trading_stock_list = self.train_env.observation_space.stock_data_list
                         best_episode = i
 
+            sp = Save_Params()
+            sp.save(self.sess, file_name="Q_Learning.ckpt")
+
         self.print_result()
 
         timer.stop(name="train_all")
@@ -368,6 +384,52 @@ class ReinforceLearning_NN(ReinforceLearning):
                                     Id_name="date", value_name="close")
                 mg_chart_graph.save_chart_graph(stock_data_df)
 
+    def test(self):
+        train_f = False
+
+        timer = Timer(file_name="test")
+        timer.start(name="test")
+
+        with tf.Session() as sess:
+            self.sess = sess
+
+            try:
+                sess_file = "2018-04-11-09-27-12/Q_Learning.ckpt"
+                lp = Load_Params()
+                lp.load(sess, file_name=sess_file)
+            except Exception as e:
+                print(e)
+                sess.run(self.init)
+
+            rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation(train=train_f)
+
+            while j < self.step_num: # step
+                j+=1
+                a, allQ = self.choose_action_by_greedily_from_the_QNetwork(s, train=train_f)
+                s1, r, d = self.get_new_state_reward_from_environment(a[0], train=train_f)
+                s1 = self.ajust_status_no(s1, network="output")
+                self.s1 = s1
+
+                targetQ = self.set_target_value_for_chosen_action(s1, allQ, a)
+                self.train_network_using_target_predicted_Q_values(s)
+
+                self.status_check(episode="test", step=j, Qtable=False)
+                rAll += r
+                self.s, s = s1, s1
+
+                if d == True:
+                    break
+
+        print("test resutl {}".format(rAll))
+
+        timer.stop(name="test")
+        timer.result_write_csv()
+
+        if self.game_name == "Trading":
+            for cnt, stock_data_df in enumerate(self.test_env.observation_space.stock_data_list):
+                mg_chart_graph = Make_Graph(file_name="best_reward_chart_graph_stock_test:{}".format(cnt), \
+                                    Id_name="date", value_name="close")
+                mg_chart_graph.save_chart_graph(stock_data_df)
 
 def main():
     # RL = ReinforceLearning(game_name="FrozenLake")
@@ -380,81 +442,8 @@ def main_tmp():
     # RL_NN = ReinforceLearning_NN(game_name="FrozenLake")
     RL_NN = ReinforceLearning_NN(game_name="Trading")
     RL_NN.train()
-    raise
-    env = gym.make("FrozenLake-v0")
-
-    tf.reset_default_graph()
-
-    # These lines establish the feed-forward part of the network used to choose actions
-    inputs1 = tf.placeholder(shape=[1, 16],dtype=tf.float32)
-    W = tf.Variable(tf.random_uniform([16,4],0,0.01))
-    Qout = tf.matmul(inputs1,W)
-    predict = tf.argmax(Qout,1)
-
-    # Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
-    nextQ = tf.placeholder(shape=[1,4],dtype=tf.float32)
-    loss = tf.reduce_sum(tf.square(nextQ - Qout))
-    trainer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
-    updateModel = trainer.minimize(loss)
-
-    init = tf.initialize_all_variables()
-    init = tf.global_variables_initializer()
-
-    # Set learning parameters
-    y = .99
-    e = 0.1
-    num_episodes = 2000
-
-    # create lists to contain total rewards and steps per episode
-    jList = []
-    rList = []
-
-    with tf.Session() as sess:
-        sess.run(init)
-        for i in range(num_episodes):
-
-            # Reset environment and get first new observation
-            s = env.reset()
-            rAll = 0
-            d = False
-            j = 0
-
-            # The Q-Network
-            while j < 99:
-                j+=1
-
-                # Choose an action by greedily (with e chance of random action) from the Q-network
-                a, allQ = sess.run([predict,Qout],feed_dict={inputs1:np.identity(16)[s:s+1]})
-                if np.random.rand(1) < e:
-                    a[0] = env.action_space.sample()
-
-                # Get new state and reward from environment
-                s1,r,d,_ = env.step(a[0])
-
-                # Obtain the Q' values by feeding the new state through our network
-                Q1 = sess.run(Qout,feed_dict={inputs1:np.identity(16)[s1:s1+1]})
-
-                # Obtain maxQ' and set our target value for chosen action.
-                maxQ1 = np.max(Q1)
-                targetQ = allQ
-                targetQ[0,a[0]] = r + y*maxQ1
-
-                # Train our network using target and predicted Q values
-                _,W1 = sess.run([updateModel,W],feed_dict={inputs1:np.identity(16)[s:s+1],nextQ:targetQ})
-
-                rAll += r
-                s = s1
-
-                if d == True:
-                    # Reduce chance of random action as we train the model.
-                    e = 1./((i/50) + 10)
-                    break
-
-            jList.append(j)
-            rList.append(rAll)
-
-    print("Percent of succesful episodes: " + str(sum(rList)/num_episodes) + "%")
-    plt.plot(rList)
+    # RL_NN.test()
+    RL_NN.result(Qtable=False, check=False, train=True)
 
 if __name__ == "__main__":
     # main()
