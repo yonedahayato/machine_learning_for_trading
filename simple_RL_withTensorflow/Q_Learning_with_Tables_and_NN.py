@@ -324,9 +324,8 @@ class ReinforceLearning_NN(ReinforceLearning):
             self.sess = sess
 
             try:
-                sess_file = "2018-04-11-09-27-12/Q_Learning.ckpt"
                 lp = Load_Params()
-                lp.load(sess, file_name=sess_file)
+                lp.load(sess)
             except Exception as e:
                 print(e)
                 sess.run(self.init)
@@ -370,7 +369,7 @@ class ReinforceLearning_NN(ReinforceLearning):
                         best_episode = i
 
             sp = Save_Params()
-            sp.save(self.sess, file_name="Q_Learning.ckpt")
+            sp.save(self.sess, file_name="Q_Learning_{}.ckpt".format(self.game_name))
 
         self.print_result()
 
@@ -394,9 +393,8 @@ class ReinforceLearning_NN(ReinforceLearning):
             self.sess = sess
 
             try:
-                sess_file = "2018-04-11-09-27-12/Q_Learning.ckpt"
                 lp = Load_Params()
-                lp.load(sess, file_name=sess_file)
+                lp.load(sess)
             except Exception as e:
                 print(e)
                 sess.run(self.init)
@@ -442,7 +440,7 @@ def main_NN():
     # RL_NN = ReinforceLearning_NN(game_name="FrozenLake")
     RL_NN = ReinforceLearning_NN(game_name="Trading")
     RL_NN.train()
-    # RL_NN.test()
+    RL_NN.test()
     RL_NN.result(Qtable=False, check=False, train=True)
 
 if __name__ == "__main__":
