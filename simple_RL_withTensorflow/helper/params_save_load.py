@@ -1,7 +1,11 @@
 from datetime import datetime as dt
 from glob import glob
 import os
+import sys
 import tensorflow as tf
+
+sys.path.append("./helper")
+from params_setting import load_file
 
 class Setting:
     def __init__(self, save_flag=True):
@@ -36,13 +40,14 @@ class Save_Params(Setting):
 
     def save(self, sess, file_name):
         self.save_path = self.save_path + "/" + file_name
+        print("[save]: save parameters, {}".format(self.save_path))
         self.saver.save(sess, self.save_path)
 
 class Load_Params(Setting):
     def __init__(self):
         Setting.__init__(self, save_flag=False)
 
-    def load(self, sess, file_name=""):
+    def load(self, sess, file_name=load_file):
         if file_name == "":
             raise Exception("[load]: please input file name")
 
