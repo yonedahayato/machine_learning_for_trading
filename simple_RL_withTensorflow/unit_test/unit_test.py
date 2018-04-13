@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import shutil
 import sys
+from time import sleep
 from unittest import TestCase, main
 import unittest
 
@@ -9,7 +10,7 @@ pardir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(pardir)
 sys.path.extend(["../helper", "./helper"])
 from trading_env import Trading_Env
-from Q_Learning_with_Tables_and_NN import ReinforceLearning
+from Q_Learning_with_Tables_and_NN import ReinforceLearning, ReinforceLearning_NN
 from load_stock_data import Load_Stock_Data
 
 class test_name(TestCase):
@@ -68,6 +69,7 @@ class test_name(TestCase):
 
         print(size_list)
 
+    @unittest.skip("tmp")
     def test_load_stock_data_from_CSVfile_case1(self):
         save_path = "./helper/stock_data"
         if os.path.exists(save_path):
@@ -82,12 +84,13 @@ class test_name(TestCase):
         test_data_num = 200
 
         stock_data_list_train, stock_data_list_test = \
-            LSD.load_from_PandasDataReader(start, end, train_data_num, test_data_num, view_data=True)
+            LSD.load_from_PandasDataReader(start, end, train_data_num, test_data_num, view_data=False)
 
         LSD_formCSV = Load_Stock_Data(save=True)
 
         stock_data_list_train, stock_data_list_test = LSD_formCSV.load_from_CSVfiles()
 
+    @unittest.skip("tmp")
     def check_profit_result(self, stock_data_df):
         status = "not_hold"
         error_list = []
@@ -125,6 +128,7 @@ class test_name(TestCase):
 
         return profit, error_list
 
+    @unittest.skip("tmp")
     def test_check_profit_result(self):
         RL = ReinforceLearning(game_name="Trading")
         RL.set_parameters(num_episodes=3)
@@ -153,11 +157,22 @@ class test_name(TestCase):
 
         self.assertTrue(result)
 
+    @unittest.skip("tmp")
     def test_frozenlake(self):
         RL = ReinforceLearning(game_name="FrozenLake")
         RL.train()
         RL.test()
-        RL.result(Qtable=False, check=False, train=True)
+        # RL.result(Qtable=False, check=False, train=True)
+
+    def test_frozenlake_NN(self):
+        RL_NN = ReinforceLearning_NN(game_name="FrozenLake")
+        RL_NN.set_parameters(num_episodes=3)
+        for i in range(3):
+            print("== {} ==".format(i))
+            RL_NN.train()
+            sleep(2)
+            RL_NN.test()
+            sleep(2)
 
     @unittest.skip("skip message <skipもできる>")
     def test_skip(self):
