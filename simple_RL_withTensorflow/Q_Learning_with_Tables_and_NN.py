@@ -235,6 +235,7 @@ class ReinforceLearning_NN(ReinforceLearning):
         ReinforceLearning.__init__(self, game_name=game_name)
 
         self.make_network_with_tensorflow()
+        self.params_save_path = ""
 
     def make_network_with_tensorflow(self):
         tf.reset_default_graph()
@@ -325,7 +326,7 @@ class ReinforceLearning_NN(ReinforceLearning):
 
             try:
                 lp = Load_Params()
-                lp.load(sess)
+                lp.load(sess, self.params_save_path)
             except Exception as e:
                 print(e)
                 sess.run(self.init)
@@ -369,7 +370,7 @@ class ReinforceLearning_NN(ReinforceLearning):
                         best_episode = i
 
             sp = Save_Params()
-            sp.save(self.sess, file_name="Q_Learning_{}.ckpt".format(self.game_name))
+            self.params_save_path = sp.save(self.sess, file_name="Q_Learning_{}.ckpt".format(self.game_name))
 
         self.print_result()
 
@@ -394,7 +395,7 @@ class ReinforceLearning_NN(ReinforceLearning):
 
             try:
                 lp = Load_Params()
-                lp.load(sess)
+                lp.load(sess, self.params_save_path)
             except Exception as e:
                 print(e)
                 sess.run(self.init)
@@ -411,7 +412,7 @@ class ReinforceLearning_NN(ReinforceLearning):
                 targetQ = self.set_target_value_for_chosen_action(s1, allQ, a)
                 self.train_network_using_target_predicted_Q_values(s)
 
-                self.status_check(episode="test", step=j, Qtable=False)
+                # self.status_check(episode="test", step=j, Qtable=False)
                 rAll += r
                 self.s, s = s1, s1
 
