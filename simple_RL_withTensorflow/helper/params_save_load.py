@@ -43,19 +43,43 @@ class Save_Params(Setting):
         print("[save]: save parameters, {}".format(self.save_path))
         self.saver.save(sess, self.save_path)
 
+        return file_name
+
 class Load_Params(Setting):
     def __init__(self):
         Setting.__init__(self, save_flag=False)
 
-    def load(self, sess, file_name=load_file):
+    def find_latest_params(self, file_name):
+        file_name = file_name.split("/")[-1]
+
+        params_dir_list = glob(self.params_path + "/*/")
+        params_dir_list = sorted(params_dir_list, reverse=True)
+
+        if len(params_dir_list) == 0:
+            raise Exception("[find latest params]: can not find params files in {}".format(self.params_path))
+
+        for params_dir in params_dir_list:
+            load_path = params_dir + file_name
+            if self.check_exists_params_files(load_path):
+                return load_path
+        raise Exception("[find latest params]: can not find latest params file")
+
+    def check_exists_params_files(self, load_path):
+        check = os.path.exists(load_path + ".index")
+        return check
+
+    def load(self, sess, file_name=""):
         if file_name == "":
-            raise Exception("[load]: please input file name")
+            file_name = load_file
 
         self.load_path = self.params_path + "/" + file_name
-        if not os.path.exists(self.load_path + ".index"):
-            raise Exception("[load]: there are not load file")
 
-        print("[load]: loading params, {}".format(file_name))
+        if not self.check_exists_params_files(self.load_path):
+            print("[load]: can not find this params file, {}".format(self.load_path))
+            print("[load]: finding latest params...")
+            self.load_path = self.find_latest_params(file_name)
+
+        print("[load]: loading params, {}".format(self.load_path))
         self.saver.restore(sess, self.load_path)
 
 def save_load():
