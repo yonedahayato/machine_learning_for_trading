@@ -440,7 +440,7 @@ def main():
 def main_NN():
     # RL_NN = ReinforceLearning_NN(game_name="FrozenLake")
     RL_NN = ReinforceLearning_NN(game_name="Trading")
-    for i in range(2)
+    for i in range(2):
         print("== {} ==".format(i))
         RL_NN.train()
         RL_NN.test()
