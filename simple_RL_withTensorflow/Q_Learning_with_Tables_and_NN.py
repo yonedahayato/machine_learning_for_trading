@@ -440,9 +440,11 @@ def main():
 def main_NN():
     # RL_NN = ReinforceLearning_NN(game_name="FrozenLake")
     RL_NN = ReinforceLearning_NN(game_name="Trading")
-    RL_NN.train()
-    RL_NN.test()
-    RL_NN.result(Qtable=False, check=False, train=True)
+    for i in range(2);
+        print("== {} ==".format(i))
+        RL_NN.train()
+        RL_NN.test()
+        RL_NN.result(Qtable=False, check=False, train=True)
 
 if __name__ == "__main__":
     # main()
