@@ -382,6 +382,7 @@ class ReinforceLearning_NN(ReinforceLearning):
             for cnt, stock_data_df in enumerate(best_reward_trading_stock_list):
                 mg_chart_graph = Make_Graph(file_name="best_reward_chart_graph_stock_train:{}_episode:{}".format(cnt, best_episode), \
                                     Id_name="date", value_name="close")
+                mg_chart_graph.save_path = mg_train_reward.save_path
                 mg_chart_graph.save_chart_graph(stock_data_df)
 
     def test(self):
