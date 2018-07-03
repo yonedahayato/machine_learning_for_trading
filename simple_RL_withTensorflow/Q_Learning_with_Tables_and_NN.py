@@ -11,15 +11,15 @@ from helper.timer import Timer
 from trading_env import Trading_Env
 
 class ReinforceLearning():
-    def __init__(self, game_name="FrozenLake"):
+    def __init__(self, game_name="FrozenLake", status_value=False):
         self.game_name = game_name
         if game_name == "FrozenLake":
             self.train_env = gym.make("FrozenLake-v0")
             self.test_env = gym.make("FrozenLake-v0")
 
         elif game_name == "Trading":
-            self.train_env = Trading_Env(train=True)
-            self.test_env = Trading_Env(train=False)
+            self.train_env = Trading_Env(train=True, status_value=status_value)
+            self.test_env = Trading_Env(train=False, status_value=status_value)
         else:
             raise("It is invalid game name.")
 
@@ -67,9 +67,9 @@ class ReinforceLearning():
 
     def reset_environment_and_get_first_new_observation(self, train=True):
         if train:
-            s = self.train_env.reset()
+                s = self.train_env.reset()
         else:
-            s = self.test_env.reset()
+                s = self.test_env.reset()
         self.s = s
 
         rAll = 0
@@ -93,9 +93,15 @@ class ReinforceLearning():
     def get_new_state_reward_from_environment(self, action, train=True):
         #Get new state and reward from environment
         if train:
-            s1, r, d, _ = self.train_env.step(action)
+            if self.game_name == "FrozenLake":
+                s1, r, d, _ = self.train_env.step(action)
+            elif self.game_name == "Trading":
+                s1, r, d, _ = self.train_env.step(action)
         else:
-            s1, r, d, _ = self.test_env.step(action)
+            if self.game_name == "FrozenLake":
+                s1, r, d, _ = self.test_env.step(action)
+            elif self.game_name == "Trading":
+                s1, r, d, _ = self.test_env.step(action)
 
         self.s1 = s1
         self.r = r
@@ -231,18 +237,37 @@ class ReinforceLearning():
                 mg_chart_graph.save_chart_graph(stock_data_df)
 
 class ReinforceLearning_NN(ReinforceLearning):
-    def __init__(self, game_name="FrozenLake"):
-        ReinforceLearning.__init__(self, game_name=game_name)
+    def __init__(self, game_name="FrozenLake", status_value=False):
+        ReinforceLearning.__init__(self, game_name=game_name, status_value=status_value)
+        self.status_value = status_value
 
         self.make_network_with_tensorflow()
         self.params_save_path = ""
 
     def make_network_with_tensorflow(self):
+        msg = "[make_network_with_tensorflow]: "
         tf.reset_default_graph()
 
         #These lines establish the feed-forward part of the network used to choose actions
-        self.inputs1 = tf.placeholder(shape=[1, self.train_env.observation_space.n],dtype=tf.float32)
-        self.W = tf.Variable(tf.random_uniform([self.train_env.observation_space.n, self.train_env.action_space.n],0,0.01))
+        if self.game_name == "FrozenLake" or (self.game_name == "Trading" and not self.status_value):
+            self.inputs1 = tf.placeholder(shape=[1, self.train_env.observation_space.n],dtype=tf.float32)
+        elif self.game_name == "Trading" and self.status_value:
+            # input [adjust close / SMA, Bollinger Band value, P/E ratio]
+            self.inputs1 = tf.placeholder(shape=[1, self.train_env.observation_space.stock_num *
+                                                    self.train_env.observation_space.max_status_num], dtype=tf.float32)
+            self.input_shape = (1, self.train_env.observation_space.stock_num *
+                                    self.train_env.observation_space.max_status_num)
+        else:
+            print(msg + "game name is invalid")
+
+        if self.game_name == "FrozenLake" or (self.game_name == "Trading" and not self.status_value):
+            self.W = tf.Variable(tf.random_uniform([self.train_env.observation_space.n, self.train_env.action_space.n],0,0.01))
+        elif self.game_name == "Trading" and self.status_value:
+            self.W = tf.Variable(tf.random_uniform([self.train_env.observation_space.stock_num * self.train_env.observation_space.max_status_num,
+                                                    self.train_env.action_space.n], 0, 0.01))
+        else:
+            print(msg + "game name is invalid")
+
         self.Qout = tf.matmul(self.inputs1, self.W)
         self.predict = tf.argmax(self.Qout,1)
 
@@ -262,7 +287,10 @@ class ReinforceLearning_NN(ReinforceLearning):
         # self.num_episodes = 10
         self.step_num = 200
 
-    def ajust_status_no(self, s, network=""):
+    def adjust_status_no(self, s, network=""):
+        if self.value:
+            return
+
         if not self.game_name == "Trading":
             return s
 
@@ -271,15 +299,17 @@ class ReinforceLearning_NN(ReinforceLearning):
         elif network == "output":
             s -= 1
         else:
-            raise("[ajust status no]: invalid network's in/out")
+            raise("[adjust status no]: invalid network's in/out")
 
         return s
 
     def choose_action_by_greedily_from_the_QNetwork(self, s, train=True):
-        s = self.ajust_status_no(s, network="input")
-
         #Choose an action by greedily (with e chance of random action) from the Q-network
-        a, allQ = self.sess.run([self.predict, self.Qout],feed_dict={self.inputs1:np.identity(self.train_env.observation_space.n)[s:s+1]})
+        if self.game_name == "FrozenLake" or (self.game_name == "Trading" and not self.status_value):
+            s = self.adjust_status_no(s, network="input")
+            a, allQ = self.sess.run([self.predict, self.Qout],feed_dict={self.inputs1 : np.identity(self.train_env.observation_space.n)[s:s+1]})
+        elif self.game_name == "Trading" and self.status_value:
+            a, allQ = self.sess.run([self.predict, self.Qout], feed_dict={self.inputs1 : np.reshape(np.array(s), self.input_shape)})
 
         if np.random.rand(1) < self.e:
             if train:
@@ -292,10 +322,16 @@ class ReinforceLearning_NN(ReinforceLearning):
         return a, allQ
 
     def set_target_value_for_chosen_action(self, s1, allQ, a):
-        s1 = self.ajust_status_no(s1, network="input")
+        msg = "[set_target_value_for_chosen_action]: "
 
         #Obtain the Q' values by feeding the new state through our network
-        Q1 = self.sess.run(self.Qout,feed_dict={self.inputs1:np.identity(self.train_env.observation_space.n)[s1:s1+1]})
+        if self.game_name == "FrozenLake" or (self.game_name == "Trading" and not self.status_value):
+            s1 = self.adjust_status_no(s1, network="input")
+            Q1 = self.sess.run(self.Qout,feed_dict={self.inputs1:np.identity(self.train_env.observation_space.n)[s1:s1+1]})
+        elif self.game_name == "Trading" and self.status_value:
+            Q1 = self.sess.run(self.Qout, feed_dict={self.inputs1: np.reshape(np.array(s1), self.input_shape)})
+        else:
+            print(msg + "game name is invalid")
 
         #Obtain maxQ' and set our target value for chosen action.
         maxQ1 = np.max(Q1)
@@ -306,13 +342,37 @@ class ReinforceLearning_NN(ReinforceLearning):
         return targetQ
 
     def train_network_using_target_predicted_Q_values(self, s):
-        s = self.ajust_status_no(s, network="input")
+        msg = "[train_network_using_target_predicted_Q_values]: "
 
-        _, W1 = self.sess.run([self.updateModel, self.W],
-            feed_dict={self.inputs1: np.identity(self.train_env.observation_space.n)[s:s+1],self.nextQ:self.targetQ})
+        if self.game_name == "FrozenLake" or (self.game_name == "Trading" and not self.status_value):
+            s = self.adjust_status_no(s, network="input")
+            _, W1 = self.sess.run([self.updateModel, self.W],
+                feed_dict={self.inputs1: np.identity(self.train_env.observation_space.n)[s:s+1],self.nextQ:self.targetQ})
+        elif self.game_name == "Trading" and self.status_value:
+            _, W1 = self.sess.run([self.updateModel, self.W],
+                    feed_dict={self.inputs1: np.reshape(np.array(s), self.input_shape), self.nextQ : self.targetQ})
+        else:
+            print(msg + "game name is invalid")
 
     def print_result(self):
         print("Percent of succesful episodes: " + str(sum(self.rList) / self.num_episodes) + "%")
+
+    def reset_environment_and_calculate_state(self, train=True):
+        msg = "[reset_environment_and_calculate_state]: "
+        if train:
+                s = self.train_env.reset()
+        else:
+                s = self.test_env.reset()
+
+        self.s = s
+
+        rAll = 0
+        d = False
+        j = 0
+        actions = []
+        statuses = [s]
+
+        return rAll, d, j, actions, statuses, s
 
     def train(self):
         train_f = True
@@ -335,7 +395,8 @@ class ReinforceLearning_NN(ReinforceLearning):
                 timer.start(name="train_episode_{}".format(i))
 
                 #Reset environment and get first new observation
-                rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation(train=train_f)
+                # rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation(train=train_f)
+                rAll, d, j, actions, statuses, s = self.reset_environment_and_calculate_state(train=train_f)
 
                 #The Q-Network
                 while j < self.step_num:
@@ -343,7 +404,9 @@ class ReinforceLearning_NN(ReinforceLearning):
 
                     a, allQ = self.choose_action_by_greedily_from_the_QNetwork(s, train=train_f)
                     s1, r, d = self.get_new_state_reward_from_environment(a[0], train=train_f)
-                    s1 = self.ajust_status_no(s1, network="output")
+                    if self.game_name == "FrozenLake" or (self.game_name == "Trading" and not self.status_value):
+                        s1 = self.adjust_status_no(s1, network="output")
+
                     self.s1 = s1
 
                     targetQ = self.set_target_value_for_chosen_action(s1, allQ, a)
@@ -368,6 +431,8 @@ class ReinforceLearning_NN(ReinforceLearning):
                     if rAll >= max(self.rList):
                         best_reward_trading_stock_list = self.train_env.observation_space.stock_data_list
                         best_episode = i
+                    else:
+                        print("rAll: {}, max_rList: {}".format(rAll, max(self.rList)))
 
             sp = Save_Params()
             self.params_save_path = sp.save(self.sess, file_name="Q_Learning_{}.ckpt".format(self.game_name))
@@ -401,13 +466,15 @@ class ReinforceLearning_NN(ReinforceLearning):
                 print(e)
                 sess.run(self.init)
 
-            rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation(train=train_f)
+            # rAll, d, j, actions, statuses, s = self.reset_environment_and_get_first_new_observation(train=train_f)
+            rAll, d, j, actions, statuses, s = self.reset_environment_and_calculate_state(train=train_f)
 
             while j < self.step_num: # step
                 j+=1
                 a, allQ = self.choose_action_by_greedily_from_the_QNetwork(s, train=train_f)
                 s1, r, d = self.get_new_state_reward_from_environment(a[0], train=train_f)
-                s1 = self.ajust_status_no(s1, network="output")
+                if self.game_name == "FrozenLake" or (self.game_name == "Trading" and not self.status_value):
+                    s1 = self.adjust_status_no(s1, network="output")
                 self.s1 = s1
 
                 targetQ = self.set_target_value_for_chosen_action(s1, allQ, a)
@@ -440,7 +507,7 @@ def main():
 
 def main_NN():
     # RL_NN = ReinforceLearning_NN(game_name="FrozenLake")
-    RL_NN = ReinforceLearning_NN(game_name="Trading")
+    RL_NN = ReinforceLearning_NN(game_name="Trading", status_value=True)
     for i in range(2):
         print("== {} ==".format(i))
         RL_NN.train()
