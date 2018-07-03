@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import pytest
 import shutil
 import sys
 from time import sleep
@@ -9,11 +10,11 @@ import unittest
 pardir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(pardir)
 sys.path.extend(["../helper", "./helper"])
-from trading_env import Trading_Env
+from trading_env import Trading_Env, Observation, Action
 from Q_Learning_with_Tables_and_NN import ReinforceLearning, ReinforceLearning_NN
 from load_stock_data import Load_Stock_Data
 
-class test_name(TestCase):
+class Unit_Test(TestCase):
     @classmethod
     def setUpClass(cls):
         print('*** 全体前処理 ***')
@@ -21,6 +22,8 @@ class test_name(TestCase):
         cls.check_data_dict = {"data_name": [], "data":[]}
         # test_name.check_data_dict["data_name"].append("data_name1")
         # test_name.check_data_dict["data"].append(data1)
+        cls.observation_space_train = Observation(train=True, status_value=True)
+        cls.observation_space_test = Observation(train=False, status_value=True)
 
     def setUp(self):
         print('+ テスト前処理')
@@ -90,7 +93,6 @@ class test_name(TestCase):
 
         stock_data_list_train, stock_data_list_test = LSD_formCSV.load_from_CSVfiles()
 
-    @unittest.skip("tmp")
     def check_profit_result(self, stock_data_df):
         status = "not_hold"
         error_list = []
@@ -124,11 +126,10 @@ class test_name(TestCase):
             close = new_close
 
         if success_cnt != len(stock_data_df):
-            error_list.appned("error: success_cnt != len(stock_data_df)")
+            error_list.append("error: success_cnt != len(stock_data_df)")
 
         return profit, error_list
 
-    @unittest.skip("tmp")
     def test_check_profit_result(self):
         RL = ReinforceLearning(game_name="Trading")
         RL.set_parameters(num_episodes=3)
@@ -141,6 +142,7 @@ class test_name(TestCase):
         error_cnt = 0
         profit = 0
         last_stock_data_list = RL.train_env.observation_space.stock_data_list
+
         for stock_id, stock_data_df in enumerate(last_stock_data_list):
             profit_tmp, error_list_tmp = self.check_profit_result(stock_data_df)
 
@@ -150,7 +152,14 @@ class test_name(TestCase):
                 error_cnt += 1
 
         if (error_cnt != 0) or (RL.rList[-1] != profit):
-            print("error, error_cnt: {}, RL.rList[-1]: {}, profit: {}".format(error_cnt, RL.rList[-1], profit))
+            err_msg = "error, error_cnt: {}, RL.rList[-1]: {}, profit: {}".format(error_cnt, RL.rList[-1], profit)
+
+            Unit_Test.check_data_dict["data_name"].append(err_msg)
+            Unit_Test.check_data_dict["data"].append(error_list)
+
+            Unit_Test.check_data_dict["data_name"].append("last_stock_data_list")
+            Unit_Test.check_data_dict["data"].append(last_stock_data_list)
+
             result = False
         else:
             result = True
@@ -170,9 +179,25 @@ class test_name(TestCase):
         for i in range(3):
             print("== {} ==".format(i))
             RL_NN.train()
-            sleep(2)
             RL_NN.test()
-            sleep(2)
+
+    def test_Trading_NN_not_status_value(self):
+        for i in range(3):
+            print("== {} ==".format(i))
+            RL_NN = ReinforceLearning_NN(game_name="Trading", status_value=False)
+            RL_NN.set_parameters(num_episodes=3)
+            RL_NN.train()
+            RL_NN.test()
+
+    def test_calculate_status(self):
+        Unit_Test.observation_space_train.calculate_status()
+
+    @pytest.mark.value
+    def test_Trading_NN_status_value(self):
+        RL_NN_value = ReinforceLearning_NN(game_name="Trading", status_value=True)
+        RL_NN_value.set_parameters(num_episodes=3)
+        RL_NN_value.train()
+        RL_NN_value.test()
 
     @unittest.skip("skip message <skipもできる>")
     def test_skip(self):
@@ -189,3 +214,5 @@ class test_name(TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+# pytest unit_test.py -v -n 2
