@@ -4,16 +4,19 @@ import numpy as np
 import pandas as pd
 import pandas_datareader.data as web
 import random
+from sklearn import preprocessing
+import talib
 
 from helper.load_stock_data import Load_Stock_Data
 
 class Observation:
-    def __init__(self, train):
+    def __init__(self, train, status_value=False):
         self.train = train
 
         self.data_length = 0
+        self.preparat_data_num = 10
         self.stock_data_list = []
-        stock_data_list = self.load_stock_data()
+        stock_data_list = self.load_stock_data(status_value)
 
         self.stock_num = len(stock_data_list)
 
@@ -23,8 +26,9 @@ class Observation:
         self.n = self.observation_num + 1
 
         self.penalty = None
+        self.status_value = status_value
 
-    def load_stock_data(self):
+    def load_stock_data(self, status_value=False):
         # start = datetime.datetime(2016,1,1)
         # end = datetime.date.today()
         start = "2015-01-01"
@@ -34,16 +38,25 @@ class Observation:
         test_data_num = 200
 
         LSD = Load_Stock_Data()
+        if status_value:
+            train_data_num_all = train_data_num + self.preparat_data_num
+            test_data_num_all = test_data_num + self.preparat_data_num
+        else:
+            train_data_num_all = train_data_num
+            test_data_num_all = test_data_num
+
         stock_data_list_train, stock_data_list_test = \
-            LSD.load_from_PandasDataReader(start, end, train_data_num, test_data_num, view_data=False)
+            LSD.load_from_PandasDataReader(start, end, train_data_num_all, test_data_num_all, view_data=False)
 
         if self.train:
-            self.data_length = LSD.train_data_length
+            # self.data_length = LSD.train_data_length
+            self.data_length = train_data_num
             self.stock_data_list = stock_data_list_train
             return stock_data_list_train
 
         else:
-            self.data_length = LSD.test_data_length
+            # self.data_length = LSD.test_data_length
+            self.data_length = test_data_num
             self.stock_data_list = stock_data_list_test
             return stock_data_list_test
 
@@ -51,6 +64,9 @@ class Observation:
         self.hold_status = [0]*self.stock_num
         self.status_table = np.arange(self.observation_num).reshape(self.data_length, len(self.status) ** self.stock_num)
         self.status_number_table = [list(value) for value in list(itertools.product([1, 0],repeat=self.stock_num))]
+
+        if self.status_value:
+            self.calculate_status()
 
     def update_status(self, action, Id, step_num):
         stock_data_df = self.stock_data_list[Id]
@@ -105,7 +121,11 @@ class Observation:
                     self.update_status(action="too_much_sell", Id=Id, step_num=step_num)
 
         status_number = self.status_number_table.index(self.hold_status)
-        self.s1 = self.status_table[step_num, status_number]
+
+        if self.status_value:
+            self.s1 = self.get_status_values(step_num)
+        else:
+            self.s1 = self.status_table[step_num, status_number]
 
         return
 
@@ -134,6 +154,58 @@ class Observation:
         for Id in range(self.stock_num):
             self.stock_data_list[Id].loc[:, "status"] = "not_hold"
 
+    def calculate_status(self):
+        msg = "[calculate_status]: "
+        self.status_df_list = []
+        # SMA : Simple Moving Average
+        sma_list = []
+
+        # Rate of deviation
+        dr_list = []
+
+        # Bollinger Band
+        BBand_upper_list = []
+        BBand_middle_list = []
+        BBand_lower_list = []
+
+        # PER
+        ## todo ##
+
+        for stock_cnt, stock_data_df in enumerate(self.stock_data_list):
+            close_df = stock_data_df["Close"]
+
+            sma_df = talib.SMA(close_df, timeperiod=self.preparat_data_num+1)
+            sma_list.append(sma_df)
+
+            dr_df = sma_df / close_df
+            dr_list.append(dr_df)
+
+            upper_df, middle_df, lower_df = talib.BBANDS(close_df, timeperiod=self.preparat_data_num+1)
+            BBand_upper_list.append(upper_df)
+            BBand_middle_list.append(middle_df)
+            BBand_lower_list.append(lower_df)
+
+            status_df = pd.concat([sma_df, dr_df, upper_df, middle_df, lower_df], axis=1)
+            status_df.columns = ["sma", "rate_of_deviation", "BBand_upper", "BBand_middle", "BBand_lower"]
+            status_df = (status_df - status_df.min()) / (status_df.max() - status_df.min())
+            self.status_df_list.append(status_df)
+
+            stock_data_df = pd.concat([stock_data_df, status_df], axis=1)
+            stock_data_df = stock_data_df.iloc[self.preparat_data_num:]
+            self.stock_data_list[stock_cnt] = stock_data_df
+            self.max_status_num = 5
+
+            # print(stock_data_df)
+
+        return
+
+    def get_status_values(self, step_num):
+        s = []
+        for stock_id in range(self.stock_num):
+            status_df = self.status_df_list[stock_id]
+            s = s + list(status_df.iloc[step_num].values)
+        return s
+
 class Action:
     def __init__(self, stock_num):
         self.action_dic = {0:"buy", 1:"sell", 2:"do_nothing"}
@@ -160,9 +232,9 @@ class Action:
         return action
 
 class Trading_Env:
-    def __init__(self, train):
+    def __init__(self, train, status_value=False):
         self.train = train
-        self.observation_space = Observation(train=train)
+        self.observation_space = Observation(train=train, status_value=status_value)
         self.observation_space.make_status()
 
         self.stock_num = self.observation_space.stock_num
@@ -172,6 +244,8 @@ class Trading_Env:
 
         self.step_num = -1
         self.s = -1
+
+        self.status_value = status_value
 
     def calculate_reward(self, reward_info):
         r = reward_info
@@ -202,8 +276,14 @@ class Trading_Env:
         self.hold_status = [0]*self.stock_num
         self.observation_space.reset()
 
-        self.step_num = -1
-        return -1
+        if self.status_value:
+            self.step_num = 0
+            s = self.observation_space.get_status_values(self.step_num)
+
+            return s
+        else:
+            self.step_num = -1
+            return -1
 
 def main():
     TE = Trading_Env()
