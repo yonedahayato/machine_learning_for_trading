@@ -288,7 +288,7 @@ class ReinforceLearning_NN(ReinforceLearning):
         self.step_num = 200
 
     def adjust_status_no(self, s, network=""):
-        if self.value:
+        if self.status_value:
             return
 
         if not self.game_name == "Trading":
