@@ -188,6 +188,7 @@ class Unit_Test(TestCase):
             RL_NN.set_parameters(num_episodes=3)
             RL_NN.train()
             RL_NN.test()
+            RL_NN.result()
 
     def test_calculate_status(self):
         Unit_Test.observation_space_train.calculate_status()
