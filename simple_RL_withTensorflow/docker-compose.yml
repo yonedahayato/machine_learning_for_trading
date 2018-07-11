@@ -1,0 +1,15 @@
+version: '3'
+services:
+  rl:
+    build:
+      context: ./dockerfile
+      dockerfile: Dockerfile
+    environment:
+      HELPER_DIR: helper_dir
+    volumes:
+      - ${HELPER_DIR}:/home/RL/helper
+    # command:
+    #   pytest ./unit_test/unit_test.py -v
+
+# env HELPER_DIR=/path/to/helper/dir docker-compose up --build
+# env HELPER_DIR=/path/to/helper/dir docker-compose run rl pytest ./unit_test/unit_test.py

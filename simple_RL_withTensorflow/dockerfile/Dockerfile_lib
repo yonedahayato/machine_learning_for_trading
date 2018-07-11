@@ -1,0 +1,55 @@
+FROM continuumio/anaconda3:latest
+
+RUN mkdir /home/RL
+WORKDIR /home/RL
+
+RUN apt-get install -y\
+  gcc\
+  make\
+  sudo
+
+# install python library using conda
+RUN conda update -y conda
+RUN conda install -y -c anaconda \
+  pandas-datareader\
+  pandas==0.20.3
+
+RUN conda install -y -c conda-forge \
+  matplotlib\
+  tensorflow
+
+# install python library talib
+RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+RUN tar -zxvf ta-lib-0.4.0-src.tar.gz
+WORKDIR /home/RL/ta-lib
+
+RUN ./configure --prefix=/usr
+RUN make
+RUN sudo make install
+
+RUN pip install TA-Lib
+WORKDIR /home/RL
+
+# install python library using pip
+RUN apt-get install -y \
+  python-numpy\
+  python-dev\
+  cmake\
+  zlib1g-dev\
+  libjpeg-dev\
+  xvfb\
+  libav-tools\
+  xorg-dev\
+  python-opengl\
+  libboost-all-dev\
+  libsdl2-dev swig\
+  libxml2\
+  libxslt1.1
+RUN pip install gym
+
+# install pytest plugin
+RUN pip install \
+  pytest-xdist \
+  pytest-forked
+
+#  docker run -it --rm <image id> /bin/bash

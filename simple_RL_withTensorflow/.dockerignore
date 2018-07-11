@@ -1,0 +1,6 @@
+helper/graph/*
+helper/params/*
+helper/stock_data/*
+helper/time_measure_result/*
+
+unit_test/__pycache__
