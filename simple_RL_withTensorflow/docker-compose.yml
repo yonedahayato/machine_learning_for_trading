@@ -2,8 +2,8 @@ version: '3'
 services:
   rl:
     build:
-      context: ./dockerfile
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./dockerfile/Dockerfile
     environment:
       HELPER_DIR: helper_dir
     volumes:
